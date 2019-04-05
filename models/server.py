@@ -8,11 +8,14 @@ from tornado.log import gen_log
 from tornado.web import MissingArgumentError
 from multiprocessing import Process
 
-from models import database_reader, DBReaderException  # some inside logic here
+from models.inner_logic import DatabaseReader, DBReaderException
+# some inner logic here
 # In this example we provide info about tickets availability
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 gen_log.disabled = True
+
+database_reader = DatabaseReader()
 
 
 class WebServer(object):
@@ -97,7 +100,6 @@ class ApiHandler(tornado.web.RequestHandler):
         try:
             city_from = self.get_argument('from')
             city_to = self.get_argument('to')
-            date_str = self.get_argument('date')
         except MissingArgumentError:
             self.set_status(400)
             return self.finish("You should specify all fields:"
@@ -105,7 +107,7 @@ class ApiHandler(tornado.web.RequestHandler):
 
         # Inner logic
         try:
-            answer = database_reader.read(city_from, date_str, city_to)
+            answer = database_reader.read(city_from, city_to)
         except DBReaderException as e:
             self.set_status(400)
             answer = str(e)
@@ -113,8 +115,7 @@ class ApiHandler(tornado.web.RequestHandler):
         # Returning results
         self.write({"result": answer,
                     "params": {"from": city_from,
-                               "to": city_to,
-                               "date_str": date_str}})
+                               "to": city_to}})
 
     def _validate_get(self):
         # ct_header = self.request.headers.get('Content-Type', None)
